@@ -184,10 +184,7 @@ exports.deleteProperty = async (req, res, next) => {
     }
 
     // Make sure user is property agent or admin
-    if (
-      property.agent.toString() !== req.user.id &&
-      req.user.role !== 'admin'
-    ) {
+    if (property.agent.toString() !== req.user.id && req.user.role !== 'admin') {
       return next(
         new ErrorResponse(
           `User ${req.user.id} is not authorized to delete this property`,
@@ -196,7 +193,8 @@ exports.deleteProperty = async (req, res, next) => {
       );
     }
 
-    await property.remove();
+    // Corrected deletion method
+    await Property.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
