@@ -1,4 +1,7 @@
 const geocoder = require('../utils/geocoder');
+
+const Property = require("../models/Property")
+
 exports.getProperties = async (req, res, next) => {
   try {
     let query;
@@ -115,6 +118,8 @@ exports.createProperty = async (req, res, next) => {
     req.body.agent = req.user.id;
 
     const property = await Property.create(req.body);
+
+    
 
     res.status(201).json({
       success: true,

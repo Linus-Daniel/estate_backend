@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const ErrorResponse = require('../utils/errorResponse');
+const User = require('../models/User');
 
 // Protect routes with JWT
 exports.protect = async (req, res, next) => {
@@ -18,6 +20,7 @@ exports.protect = async (req, res, next) => {
 
   // Make sure token exists
   if (!token) {
+
     return next(new ErrorResponse('Not authorized to access this route', 401));
   }
 
@@ -26,15 +29,17 @@ exports.protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Check if user still exists
-    const currentUser = await User.findById(decoded.id);
+
+    console.log("decoded informations", decoded)
+    const currentUser = await User.findById(decoded?.id);
     if (!currentUser) {
       return next(new ErrorResponse('The user belonging to this token no longer exists', 401));
     }
 
-    // Check if user changed password after token was issued
-    if (currentUser.changedPasswordAfter(decoded.iat)) {
-      return next(new ErrorResponse('User recently changed password! Please log in again', 401));
-    }
+    // // Check if user changed password after token was issued
+    // if (currentUser.changedPasswordAfter(decoded.iat)) {
+    //   return next(new ErrorResponse('User recently changed password! Please log in again', 401));
+    // }
 
     // Grant access to protected route
     req.user = currentUser;

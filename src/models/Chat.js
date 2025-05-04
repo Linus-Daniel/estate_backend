@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const chatSchema = new mongoose.Schema({
+const ChatSchema = new mongoose.Schema({
   participants: [
     {
       type: mongoose.Schema.ObjectId,
@@ -11,6 +11,7 @@ const chatSchema = new mongoose.Schema({
   property: {
     type: mongoose.Schema.ObjectId,
     ref: 'Property',
+    required: true,
   },
   lastMessage: {
     type: mongoose.Schema.ObjectId,
@@ -26,4 +27,10 @@ const chatSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model('Chat', chatSchema);
+// Update the updatedAt field before saving
+ChatSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+module.exports = mongoose.model('Chat', ChatSchema);

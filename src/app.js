@@ -31,6 +31,8 @@ const propertyRoutes = require('./routes/propertyRoutes');
 const blogRoutes = require('./routes/blogRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const uploadRoutes = require('./routes/uploadRoute');
+
 
 // Initialize app
 const app = express();
@@ -61,7 +63,12 @@ app.use('/api/v1/users', protect, authorize('admin'), userRoutes);
 app.use('/api/v1/properties', propertyRoutes);
 app.use('/api/v1/blogs', blogRoutes);
 app.use('/api/v1/chats', protect, csrfProtection, chatRoutes);
+app.use('/api/v1/upload', uploadRoutes, csrfProtection)
 app.use('/api/v1/payments', protect, csrfProtection, paymentRoutes);
+app.get('/api/v1/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
+
 
 // Error handling
 app.use(errorHandler);

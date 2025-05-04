@@ -237,3 +237,46 @@ exports.deleteMessage = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Initiate chat with property agent
+// @route   POST /api/v1/properties/:propertyId/chat
+// @access  Private
+exports.initiatePropertyChat = async (req, res, next) => {
+  try {
+    const { propertyId } = req.params;
+
+    // Get property and verify it exists
+    const property = await property.findById(propertyId).populate('agent', 'id');
+    if (!property) {
+      return next(new ErrorResponse('Property not found', 404));
+    }
+
+    // Check if chat already exists between user and agent for this property
+    let chat = await Chat.findOne({
+      participants: { $all: [req.user.id, property.agent._id] },
+      property: propertyId,
+    })
+      .populate('participants', 'name email photo')
+      .populate('property', 'title price images');
+
+    if (!chat) {
+      // Create new chat
+      chat = await Chat.create({
+        participants: [req.user.id, property.agent._id],
+        property: propertyId,
+      });
+
+      // Populate the new chat
+      chat = await Chat.findById(chat._id)
+        .populate('participants', 'name email photo')
+        .populate('property', 'title price images');
+    }
+
+    res.status(200).json({
+      success: true,
+      data: chat,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

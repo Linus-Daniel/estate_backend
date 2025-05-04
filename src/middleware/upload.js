@@ -48,7 +48,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: process.env.MAX_FILE_UPLOAD || 1000000 // 1MB default
+    fileSize: process.env.MAX_FILE_UPLOAD || 3000000 // 1MB default
   }
 });
 
