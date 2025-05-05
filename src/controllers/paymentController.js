@@ -3,31 +3,54 @@ const Property = require('../models/Property');
 const Transaction = require('../models/Transaction');
 const ErrorResponse = require('../utils/errorResponse');
 
+
+console.log(paystack)
+
 // @desc    Initialize Paystack payment
 // @route   POST /api/v1/payments/initialize
 // @access  Private
 exports.initializePayment = async (req, res, next) => {
   try {
-    const { propertyId, amount, email } = req.body;
+    const { propertyId, email,callback_url } = req.body;
+
+    // Validate required fields
+    if (!propertyId || !email) {
+      return next(new ErrorResponse('Property ID and email are required', 400));
+    }
 
     const property = await Property.findById(propertyId);
     if (!property) {
-      return next(new ErrorResponse(`Property not found with id ${propertyId}`, 404));
+      return next(new ErrorResponse(`Property not found with ID ${propertyId}`, 404));
     }
 
-    // Convert amount to kobo (Paystack uses kobo for NGN)
+    // Use property price to prevent tampering from client
+    const amount = property.price;
     const amountInKobo = amount * 100;
 
-    // Initialize Paystack payment
-    const payment = await paystack.transaction.initialize({
+    // Validate amount
+    if (amount <= 0) {
+      return next(new ErrorResponse('Invalid payment amount', 400));
+    }
+
+    const paymentPayload = {
       email,
       amount: amountInKobo,
-      currency: 'NGN', // or 'USD' if your Paystack account supports it
+      currency: 'NGN',
       metadata: {
         propertyId,
-        userId: req.user.id
-      }
-    });
+        userId: req.user.id,
+        propertyTitle: property.title // Add more context
+      },
+      callback_url: process.env.PAYSTACK_CALLBACK_URL // Add callback URL if needed
+    };
+
+    const payment = await paystack.transaction.initialize(paymentPayload);
+
+    // Check if payment initialization was successful
+    if (!payment || !payment.data || !payment.data.reference) {
+      console.error('Invalid Paystack response:', payment);
+      return next(new ErrorResponse('Failed to initialize payment', 500));
+    }
 
     // Create transaction record
     const transaction = await Transaction.create({
@@ -37,15 +60,18 @@ exports.initializePayment = async (req, res, next) => {
       status: 'pending',
       transactionId: payment.data.reference,
       paymentMethod: 'paystack',
+      authorizationUrl: payment.data.authorization_url
     });
 
     res.status(200).json({
       success: true,
       authorizationUrl: payment.data.authorization_url,
       reference: payment.data.reference,
-      data: transaction
+      transactionId: transaction._id
     });
+
   } catch (err) {
+    console.error('Payment initialization error:', err);
     next(err);
   }
 };
@@ -57,47 +83,81 @@ exports.verifyPayment = async (req, res, next) => {
   try {
     const { reference } = req.params;
 
-    // Verify transaction with Paystack
+    if (!reference) {
+      return next(new ErrorResponse('Reference is required', 400));
+    }
+
     const response = await paystack.transaction.verify(reference);
 
-    if (!response.data.status === 'success') {
+    // Check if verification was successful
+    if (!response || !response.data) {
+      console.error('Invalid Paystack verification response:', response);
       return next(new ErrorResponse('Payment verification failed', 400));
     }
 
-    // Update transaction status
-    const transaction = await Transaction.findOneAndUpdate(
-      { transactionId: reference },
-      { status: 'completed' },
-      { new: true }
-    );
-
+    const transaction = await Transaction.findOne({ transactionId: reference });
     if (!transaction) {
       return next(new ErrorResponse('Transaction not found', 404));
     }
 
-    // Update property status if it's a purchase
-    if (transaction.amount >= 1000) {
-      await Property.findByIdAndUpdate(transaction.property, {
-        status: 'sold',
+    // Avoid updating an already completed transaction
+    if (transaction.status === 'completed') {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Transaction already completed',
+        data: transaction 
       });
     }
 
-    res.status(200).json({
-      success: true,
+    // Update transaction based on Paystack response
+    if (response.data.status === 'success') {
+      transaction.status = 'completed';
+      transaction.paidAt = response.data.paid_at || new Date();
+      transaction.channel = response.data.channel;
+      transaction.currency = response.data.currency;
+      transaction.customer = response.data.customer?.email || transaction.customer;
+      transaction.gatewayResponse = response.data.gateway_response;
+      await transaction.save();
+
+      // Update property status if needed
+      if (transaction.amount >= 1000) {
+        await Property.findByIdAndUpdate(
+          transaction.property, 
+          { status: 'sold' },
+          { new: true }
+        );
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payment verified successfully',
+        data: transaction
+      });
+    }
+
+    // Handle other statuses (failed, abandoned, etc.)
+    transaction.status = response.data.status || 'failed';
+    await transaction.save();
+
+    return res.status(400).json({
+      success: false,
+      message: `Payment ${response.data.status || 'not completed'}`,
       data: transaction
     });
+
   } catch (err) {
-    next(err);
+    console.error('Paystack verification error:', err);
+    next(new ErrorResponse('Payment verification failed', 500));
   }
 };
 
-// @desc    Get user transactions (same as before)
+// @desc    Get user transactions
 // @route   GET /api/v1/payments/transactions
 // @access  Private
 exports.getUserTransactions = async (req, res, next) => {
   try {
     const transactions = await Transaction.find({ user: req.user.id })
-      .populate('property', 'title price')
+      .populate('property', 'title price location images')
       .sort('-createdAt');
 
     res.status(200).json({
@@ -106,6 +166,7 @@ exports.getUserTransactions = async (req, res, next) => {
       data: transactions,
     });
   } catch (err) {
-    next(err);
+    console.error('Get transactions error:', err);
+    next(new ErrorResponse('Failed to retrieve transactions', 500));
   }
 };

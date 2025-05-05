@@ -1,5 +1,6 @@
 const Chat = require('../models/Chat');
 const Message = require('../models/Message');
+const Property = require('../models/Property');
 const ErrorResponse = require('../utils/errorResponse');
 
 // @desc    Get or create chat
@@ -246,7 +247,7 @@ exports.initiatePropertyChat = async (req, res, next) => {
     const { propertyId } = req.params;
 
     // Get property and verify it exists
-    const property = await property.findById(propertyId).populate('agent', 'id');
+    const property = await Property.findById(propertyId).populate('agent', 'id');
     if (!property) {
       return next(new ErrorResponse('Property not found', 404));
     }

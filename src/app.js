@@ -62,9 +62,9 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', protect, authorize('admin'), userRoutes);
 app.use('/api/v1/properties', propertyRoutes);
 app.use('/api/v1/blogs', blogRoutes);
-app.use('/api/v1/chats', protect, csrfProtection, chatRoutes);
+app.use('/api/v1/chats', protect, chatRoutes);
 app.use('/api/v1/upload', uploadRoutes, csrfProtection)
-app.use('/api/v1/payments', protect, csrfProtection, paymentRoutes);
+app.use('/api/v1/payments', protect,  paymentRoutes);
 app.get('/api/v1/csrf-token', (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
