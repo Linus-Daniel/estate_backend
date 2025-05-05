@@ -65,10 +65,14 @@ app.use('/api/v1/blogs', blogRoutes);
 app.use('/api/v1/chats', protect, chatRoutes);
 app.use('/api/v1/upload', uploadRoutes, csrfProtection)
 app.use('/api/v1/payments', protect,  paymentRoutes);
-app.get('/api/v1/csrf-token', (req, res) => {
+app.get("/api/v1/csrf-token", (req, res) => {
+  res.cookie("XSRF-TOKEN", req.csrfToken(), {
+    httpOnly: false, // frontend needs to read it
+    secure: true,
+    sameSite: "None",
+  });
   res.json({ csrfToken: req.csrfToken() });
 });
-
 
 // Error handling
 app.use(errorHandler);
