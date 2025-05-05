@@ -74,6 +74,13 @@ app.get("/api/v1/csrf-token", (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
 
+
+app.use((req, res, next) => {
+  console.log('Incoming Request Headers:', req.headers);
+  next();
+});
+
+
 // Error handling
 app.use(errorHandler);
 
