@@ -155,8 +155,9 @@ exports.verifyPayment = async (req, res, next) => {
 // @route   GET /api/v1/payments/transactions
 // @access  Private
 exports.getUserTransactions = async (req, res, next) => {
+  const {userId} = req.params
   try {
-    const transactions = await Transaction.find({ user: req.user.id })
+    const transactions = await Transaction.find({ user:userId })
       .populate('property', 'title price location images')
       .sort('-createdAt');
 
@@ -168,5 +169,34 @@ exports.getUserTransactions = async (req, res, next) => {
   } catch (err) {
     console.error('Get transactions error:', err);
     next(new ErrorResponse('Failed to retrieve transactions', 500));
+  }
+};
+
+// controllers/transactionController.js
+
+exports.getTransactionById = async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const transaction = await Transaction.findById(req.params.id)
+      .populate('property', 'title price location images type amenities bedrooms bathrooms');
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found',
+      });
+    }
+    console.log("Transacton found")
+
+    res.status(200).json({
+      success: true,
+      data: transaction,
+      message:`Transaction  of Id ${id} found`
+    });
+
+  } catch (err) {
+    console.error('Get transaction by ID error:', err);
+    next(new Error('Failed to retrieve transaction'));
   }
 };

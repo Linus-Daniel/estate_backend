@@ -1,5 +1,7 @@
 require('dotenv').config(); // Loads env vars from .env
 
+const jwt = require('jsonwebtoken');
+
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
@@ -41,7 +43,7 @@ const app = express();
 app.use(express.json({ limit: '10kb' }));
 
 // Security middlewares
-app.use(corsMiddleware);        // ✅ Correct CORS usage
+app.use(corsMiddleware);        // Correct CORS usage
 app.use(securityHeaders);
 app.use(limiter);
 app.use(cookieParser());
@@ -74,13 +76,34 @@ app.get("/api/v1/csrf-token", (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
 
+const authenticateSocket = async (socket) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      throw new Error('Authentication token missing')
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = decoded;
+    return true;
+  } catch (err) {
+    throw new Error('Invalid or expired token');
+  }
+};
+
+module.exports = { authenticateSocket };
 
 app.use((req, res, next) => {
   console.log('Incoming Request Headers:', req.headers);
   next();
 });
 
-
+app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    console.log('CSRF Error:', req.headers, req.cookies);
+  }
+  next(err);
+});
 // Error handling
 app.use(errorHandler);
 

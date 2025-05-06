@@ -50,6 +50,22 @@ exports.protect = async (req, res, next) => {
   }
 };
 
+exports.authenticateSocket = async (socket) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      throw new Error('Authentication token missing')
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = decoded;
+    return true;
+  } catch (err) {
+    throw new Error('Invalid or expired token');
+  }
+};
+
+
 // Role-based authorization
 exports.authorize = (...roles) => {
   return (req, res, next) => {
@@ -75,3 +91,4 @@ exports.csrfProtection = (req, res, next) => {
   }
   next();
 };
+
