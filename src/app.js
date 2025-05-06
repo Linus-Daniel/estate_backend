@@ -75,8 +75,7 @@ app.get("/api/v1/csrf-token", (req, res) => {
   });
   res.json({ csrfToken: req.csrfToken() });
 });
-
-const authenticateSocket = async (socket) => {
+exports.authenticateSocket = async (socket) => {
   try {
     const token = socket.handshake.auth.token;
     if (!token) {
@@ -91,7 +90,20 @@ const authenticateSocket = async (socket) => {
   }
 };
 
-module.exports = { authenticateSocket };
+app.use(session({
+  secret: '917be34c4346e910c82e4c7c123684f99926b0d35fbf2487eff37c693a269f4c',
+  cookie: {
+    secure: true,       // Requires HTTPS
+    sameSite: 'none',   // Needed if frontend/backend are on different domains
+    httpOnly: true,
+  },
+  proxy: true,          // Required for secure cookies behind proxy
+}));
+
+app.set('trust proxy', 1); // Trust first proxy (Render)
+
+
+
 
 app.use((req, res, next) => {
   console.log('Incoming Request Headers:', req.headers);
