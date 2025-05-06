@@ -1,4 +1,5 @@
 require('dotenv').config(); // Loads env vars from .env
+const session = require('express-session');
 
 const jwt = require('jsonwebtoken');
 
@@ -89,6 +90,14 @@ exports.authenticateSocket = async (socket) => {
     throw new Error('Invalid or expired token');
   }
 };
+
+
+app.use(session({
+  secret: 'your-generated-secret-here', // Replace with your secret
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: true, sameSite: 'none' }
+}));
 
 app.use(session({
   secret: '917be34c4346e910c82e4c7c123684f99926b0d35fbf2487eff37c693a269f4c',
