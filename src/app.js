@@ -1,5 +1,4 @@
 require('dotenv').config(); // Loads env vars from .env
-const session = require('express-session');
 
 const jwt = require('jsonwebtoken');
 
@@ -90,19 +89,6 @@ exports.authenticateSocket = async (socket) => {
     throw new Error('Invalid or expired token');
   }
 };
-
-
-app.use(session({
-  secret: '917be34c4346e910c82e4c7c123684f99926b0d35fbf2487eff37c693a269f4c',
-  cookie: {
-    secure: true,       // Requires HTTPS
-    sameSite: 'none',   // Needed if frontend/backend are on different domains
-    httpOnly: true,
-  },
-  proxy: true,          // Required for secure cookies behind proxy
-}));
-
-app.set('trust proxy', 1); // Trust first proxy (Render)
 
 
 
