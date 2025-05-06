@@ -1,9 +1,8 @@
-require('dotenv').config(); // Loads env vars from .env
-const session = require('express-session');
-
-const jwt = require('jsonwebtoken');
+require('dotenv').config(); // Load env vars from .env
 
 const express = require('express');
+const session = require('express-session');
+const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const path = require('path');
@@ -15,7 +14,7 @@ const {
   sanitizeData,
   xssClean,
   hpp,
-  corsMiddleware, // <- renamed to avoid confusion
+  corsMiddleware,
 } = require('./middleware/security');
 
 const { protect, authorize, csrfProtection } = require('./middleware/auth');
@@ -23,9 +22,6 @@ const { performanceMonitor } = require('./middleware/performance');
 const { requestLogger } = require('./middleware/logger');
 const errorHandler = require('./middleware/error');
 const connectDB = require('./config/db');
-
-// Connect to database
-connectDB();
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -36,52 +32,86 @@ const chatRoutes = require('./routes/chatRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const uploadRoutes = require('./routes/uploadRoute');
 
+// Connect to database
+connectDB();
 
 // Initialize app
 const app = express();
 
-// Parse JSON requests
+// Trust Render proxy
+app.set('trust proxy', 1);
+
+// Middleware: JSON parsing
 app.use(express.json({ limit: '10kb' }));
 
-// Security middlewares
-app.use(corsMiddleware);        // Correct CORS usage
+// Middleware: Security
+app.use(corsMiddleware);
 app.use(securityHeaders);
 app.use(limiter);
 app.use(cookieParser());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-here',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: true,
+    sameSite: 'none',
+    httpOnly: true,
+  },
+  proxy: true,
+}));
 app.use(csrf({ cookie: true }));
 app.use(sanitizeData);
 app.use(xssClean);
 app.use(hpp);
 
-// Performance monitoring and request logging
+// Middleware: Monitoring & Logging
 app.use(performanceMonitor);
 app.use(requestLogger);
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Mount routes
+// Log all incoming request headers (debugging)
+app.use((req, res, next) => {
+  console.log('Incoming Request Headers:', req.headers);
+  next();
+});
+
+// CSRF error logger
+app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    console.error('CSRF Error:', req.headers, req.cookies);
+    return res.status(403).json({ message: 'Invalid CSRF token' });
+  }
+  next(err);
+});
+
+// Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', protect, authorize('admin'), userRoutes);
 app.use('/api/v1/properties', propertyRoutes);
 app.use('/api/v1/blogs', blogRoutes);
 app.use('/api/v1/chats', protect, chatRoutes);
-app.use('/api/v1/upload', uploadRoutes, csrfProtection)
-app.use('/api/v1/payments', protect,  paymentRoutes);
+app.use('/api/v1/upload', uploadRoutes); // apply csrfProtection inside route file if needed
+app.use('/api/v1/payments', protect, paymentRoutes);
+
+// Endpoint to get CSRF token
 app.get("/api/v1/csrf-token", (req, res) => {
-  res.cookie("XSRF-TOKEN", req.csrfToken(), {
-    httpOnly: false, // frontend needs to read it
+  const token = req.csrfToken();
+  res.cookie("XSRF-TOKEN", token, {
+    httpOnly: false,
     secure: true,
     sameSite: "None",
   });
-  res.json({ csrfToken: req.csrfToken() });
+  res.json({ csrfToken: token });
 });
+
+// WebSocket auth export
 exports.authenticateSocket = async (socket) => {
   try {
     const token = socket.handshake.auth.token;
-    if (!token) {
-      throw new Error('Authentication token missing')
-    }
+    if (!token) throw new Error('Authentication token missing');
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = decoded;
@@ -91,41 +121,7 @@ exports.authenticateSocket = async (socket) => {
   }
 };
 
-
-app.use(session({
-  secret: 'your-generated-secret-here', // Replace with your secret
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: true, sameSite: 'none' }
-}));
-
-app.use(session({
-  secret: '917be34c4346e910c82e4c7c123684f99926b0d35fbf2487eff37c693a269f4c',
-  cookie: {
-    secure: true,       // Requires HTTPS
-    sameSite: 'none',   // Needed if frontend/backend are on different domains
-    httpOnly: true,
-  },
-  proxy: true,          // Required for secure cookies behind proxy
-}));
-
-app.set('trust proxy', 1); // Trust first proxy (Render)
-
-
-
-
-app.use((req, res, next) => {
-  console.log('Incoming Request Headers:', req.headers);
-  next();
-});
-
-app.use((err, req, res, next) => {
-  if (err.code === 'EBADCSRFTOKEN') {
-    console.log('CSRF Error:', req.headers, req.cookies);
-  }
-  next(err);
-});
-// Error handling
+// Global error handler
 app.use(errorHandler);
 
 module.exports = app;
