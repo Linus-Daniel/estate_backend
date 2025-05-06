@@ -5,6 +5,7 @@ const User = require('../models/User');
 // Protect routes with JWT
 exports.protect = async (req, res, next) => {
   let token;
+  console.log(req.headers)
 
   // Get token from header, cookie, or query param
   if (
