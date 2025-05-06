@@ -17,7 +17,7 @@ const {
   corsMiddleware, // <- renamed to avoid confusion
 } = require('./middleware/security');
 
-const { protect, authorize, csrfProtection } = require('./middleware/auth');
+const { protect, authorize} = require('./middleware/auth');
 const { performanceMonitor } = require('./middleware/performance');
 const { requestLogger } = require('./middleware/logger');
 const errorHandler = require('./middleware/error');
