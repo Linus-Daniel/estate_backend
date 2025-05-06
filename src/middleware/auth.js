@@ -81,14 +81,13 @@ exports.authorize = (...roles) => {
   };
 };
 
-// // CSRF protection for state-changing requests
-// exports.csrfProtection = (req, res, next) => {
-//   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-//     const csrfToken = req.headers['x-csrf-token'] || req.body._csrf;
-//     if (!csrfToken || csrfToken !== req.csrfToken()) {
-//       return next(new ErrorResponse('Invalid CSRF token', 403));
-//     }
-//   }
-//   next();
-// };
-
+// CSRF protection for state-changing requests
+exports.csrfProtection = (req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    const csrfToken = req.headers['x-csrf-token'] || req.body._csrf;
+    if (!csrfToken || csrfToken !== req.csrfToken()) {
+      return next(new ErrorResponse('Invalid CSRF token', 403));
+    }
+  }
+  next();
+};
