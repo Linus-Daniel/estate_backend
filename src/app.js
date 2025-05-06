@@ -47,7 +47,7 @@ app.use(corsMiddleware);        // Correct CORS usage
 app.use(securityHeaders);
 app.use(limiter);
 app.use(cookieParser());
-app.use(csrf({ cookie: true }));
+// app.use(csrf({ cookie: true }));
 app.use(sanitizeData);
 app.use(xssClean);
 app.use(hpp);
