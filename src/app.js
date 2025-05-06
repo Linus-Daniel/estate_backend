@@ -65,7 +65,7 @@ app.use('/api/v1/users', protect, authorize('admin'), userRoutes);
 app.use('/api/v1/properties', propertyRoutes);
 app.use('/api/v1/blogs', blogRoutes);
 app.use('/api/v1/chats', protect, chatRoutes);
-app.use('/api/v1/upload', uploadRoutes, csrfProtection)
+app.use('/api/v1/upload', uploadRoutes, )
 app.use('/api/v1/payments', protect,  paymentRoutes);
 app.get("/api/v1/csrf-token", (req, res) => {
   res.cookie("XSRF-TOKEN", req.csrfToken(), {
@@ -89,6 +89,8 @@ exports.authenticateSocket = async (socket) => {
     throw new Error('Invalid or expired token');
   }
 };
+
+app.set('trust proxy', 1); // Trust first proxy (Render)
 
 
 
