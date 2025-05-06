@@ -79,13 +79,13 @@ app.use((req, res, next) => {
 });
 
 // CSRF error logger
-app.use((err, req, res, next) => {
-  if (err.code === 'EBADCSRFTOKEN') {
-    console.error('CSRF Error:', req.headers, req.cookies);
-    return res.status(403).json({ message: 'Invalid CSRF token' });
-  }
-  next(err);
-});
+// app.use((err, req, res, next) => {
+//   if (err.code === 'EBADCSRFTOKEN') {
+//     console.error('CSRF Error:', req.headers, req.cookies);
+//     return res.status(403).json({ message: 'Invalid CSRF token' });
+//   }
+//   next(err);
+// });
 
 // Routes
 app.use('/api/v1/auth', authRoutes);
