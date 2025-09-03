@@ -5,7 +5,6 @@ const User = require('../models/User');
 // Protect routes with JWT
 exports.protect = async (req, res, next) => {
   let token;
-  console.log(req.headers)
 
   // Get token from header, cookie, or query param
   if (
@@ -26,27 +25,18 @@ exports.protect = async (req, res, next) => {
   }
 
   try {
-    // Verify token
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Check if user still exists
-
     console.log("decoded informations", decoded)
     const currentUser = await User.findById(decoded?.id);
     if (!currentUser) {
       return next(new ErrorResponse('The user belonging to this token no longer exists', 401));
     }
-
-    // // Check if user changed password after token was issued
-    // if (currentUser.changedPasswordAfter(decoded.iat)) {
-    //   return next(new ErrorResponse('User recently changed password! Please log in again', 401));
-    // }
-
-    // Grant access to protected route
     req.user = currentUser;
     res.locals.user = currentUser;
     next();
   } catch (err) {
+    console.log(err)
     return next(new ErrorResponse('Not authorized to access this route', 401));
   }
 };
@@ -66,8 +56,6 @@ exports.authenticateSocket = async (socket) => {
   }
 };
 
-
-// Role-based authorization
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
@@ -81,14 +69,3 @@ exports.authorize = (...roles) => {
     next();
   };
 };
-
-// // CSRF protection for state-changing requests
-// exports.csrfProtection = (req, res, next) => {
-//   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-//     const csrfToken = req.headers['x-csrf-token'] || req.body._csrf;
-//     if (!csrfToken || csrfToken !== req.csrfToken()) {
-//       return next(new ErrorResponse('Invalid CSRF token', 403));
-//     }
-//   }
-//   next();
-// };

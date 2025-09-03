@@ -34,6 +34,8 @@ const blogRoutes = require('./routes/blogRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const uploadRoutes = require('./routes/uploadRoute');
+const subscriptions = require("./routes/subscriptionRoutes");
+const { scheduleSubscriptionCleanup } = require('./middleware/subcription');
 
 
 // Initialize app
@@ -63,10 +65,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', protect, authorize('admin'), userRoutes);
 app.use('/api/v1/properties', propertyRoutes);
+
 app.use('/api/v1/blogs', blogRoutes);
 app.use('/api/v1/chats', protect, chatRoutes);
 app.use('/api/v1/upload', uploadRoutes, )
 app.use('/api/v1/payments', protect,  paymentRoutes);
+app.use("/api/v1/subscriptions", subscriptions);
+
+
+scheduleSubscriptionCleanup();
+
+
 app.get("/api/v1/csrf-token", (req, res) => {
   res.cookie("XSRF-TOKEN", req.csrfToken(), {
     httpOnly: false, // frontend needs to read it

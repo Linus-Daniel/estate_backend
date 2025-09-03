@@ -252,6 +252,8 @@ exports.initiatePropertyChat = async (req, res, next) => {
       return next(new ErrorResponse('Property not found', 404));
     }
 
+    console.log("Property agent", property);
+
     // Check if chat already exists between user and agent for this property
     let chat = await Chat.findOne({
       participants: { $all: [req.user.id, property.agent._id] },

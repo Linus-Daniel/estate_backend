@@ -65,7 +65,7 @@ exports.getMe = async (req, res, next) => {
     success: true,
     data: user,
   });
-};
+};  
 
 // @desc    Update user details
 // @route   PUT /api/v1/auth/updatedetails
